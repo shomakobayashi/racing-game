@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏁 マリオカート風レーシングゲーム 🏁</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4);
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border: 5px solid #fff;
+        }
+
+        canvas {
+            border: 5px solid #333;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(180deg, #87CEEB, #98FB98);
+        }
+
+        .character-selection {
+            margin-bottom: 20px;
+        }
+
+        .character-option {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px;
+            background: linear-gradient(45deg, #ff9a9e, #fecfef);
+            border: 3px solid #ff6b6b;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #333;
+            font-weight: bold;
+            min-width: 120px;
+        }
+
+        .character-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .character-option.selected {
+            background: linear-gradient(45deg, #ffd93d, #ff6b6b);
+            border-color: #ff0000;
+            transform: scale(1.05);
+        }
+
+        .controls {
+            color: #333;
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #fff;
+        }
+
+        .item-display {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #ffd700;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .item-box {
+            font-size: 30px;
+            margin: 5px 0;
+        }
+
+        h1 {
+            color: #ff6b6b;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            font-size: 2.5em;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 200;
+            border: 5px solid #fff;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+        }
+
+        .position-display {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            background: rgba(255, 215, 0, 0.9);
+            color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            border: 3px solid #ff6b6b;
+        }
+
+        .speed-lines {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .minimap {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 150px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #fff;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <h1>🏁 マリオカート風レーシング 🏁</h1>
+
+        <div id="characterSelection" class="character-selection">
+            <h3 style="color: #333;">キャラクターを選択してください！</h3>
+            <div class="character-option" data-character="mario">
+                <div style="font-size: 30px;">🍄</div>
+                <h4>マリオ</h4>
+                <p>バランス型<br>スピード: ★★★☆☆<br>アイテム運: ★★★★☆</p>
+            </div>
+            <div class="character-option" data-character="luigi">
+                <div style="font-size: 30px;">👻</div>
+                <h4>ルイージ</h4>
+                <p>テクニック型<br>スピード: ★★★★☆<br>アイテム運: ★★★☆☆</p>
+            </div>
+            <div class="character-option" data-character="peach">
+                <div style="font-size: 30px;">👑</div>
+                <h4>ピーチ</h4>
+                <p>アイテム型<br>スピード: ★★☆☆☆<br>アイテム運: ★★★★★</p>
+            </div>
+            <div class="character-option" data-character="bowser">
+                <div style="font-size: 30px;">🔥</div>
+                <h4>クッパ</h4>
+                <p>パワー型<br>スピード: ★★★★★<br>アイテム運: ★★☆☆☆</p>
+            </div>
+            <div class="character-option" data-character="yoshi">
+                <div style="font-size: 30px;">🦕</div>
+                <h4>ヨッシー</h4>
+                <p>スピード型<br>スピード: ★★★★★<br>アイテム運: ★★★☆☆</p>
+            </div>
+            <div class="character-option" data-character="toad">
+                <div style="font-size: 30px;">🍄</div>
+                <h4>キノピオ</h4>
+                <p>軽量型<br>スピード: ★★★☆☆<br>アイテム運: ★★★★☆</p>
+            </div>
+            <br>
+            <button onclick="startRace()">🏁 レース開始！ 🏁</button>
+        </div>
+
+        <div id="gameArea" style="display: none; position: relative;">
+            <div class="ui-overlay">
+                <div>🏆 順位: <span id="position">1</span>/8</div>
+                <div>⭐ スコア: <span id="score">0</span></div>
+                <div>🏁 ラップ: <span id="lap">1</span>/3</div>
+                <div>💨 スピード: <span id="speed">0</span> km/h</div>
+            </div>
+
+            <div class="item-display">
+                <div>アイテム</div>
+                <div id="currentItem" class="item-box">❓</div>
+                <div id="itemName">なし</div>
+            </div>
+
+            <div class="position-display">
+                <div id="positionLarge">1st</div>
+            </div>
+
+            <canvas id="gameCanvas" width="900" height="600"></canvas>
+            <canvas id="minimap" class="minimap" width="150" height="100"></canvas>
+
+            <div class="controls">
+                <p>🎮 操作: ↑↓←→ 移動 | スペース: アイテム使用 | Shift: ドリフト</p>
+            </div>
+        </div>
+
+        <div id="gameOver" class="game-over" style="display: none;">
+            <h2>🏁 レース終了！ 🏁</h2>
+            <div id="finalPosition" style="font-size: 48px; margin: 20px 0;"></div>
+            <p>最終スコア: <span id="finalScore">0</span></p>
+            <p>完走ラップ: <span id="finalLap">0</span>/3</p>
+            <button onclick="restartRace()">🔄 もう一度レース！</button>
+            <button onclick="backToSelection()">👥 キャラクター選択に戻る</button>
+        </div>
+    </div>
+
+    <script>
+        // ゲーム設定
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const minimapCanvas = document.getElementById('minimap');
+        const minimapCtx = minimapCanvas.getContext('2d');
+
+        // キャラクターデータ
+        const characters = {
+            mario: {
+                name: 'マリオ',
+                emoji: '🍄',
+                color: '#ff0000',
+                maxSpeed: 6,
+                acceleration: 0.4,
+                itemLuck: 0.8,
+                weight: 3
+            },
+            luigi: {
+                name: 'ルイージ',
+                emoji: '👻',
+                color: '#00ff00',
+                maxSpeed: 7,
+                acceleration: 0.5,
+                itemLuck: 0.6,
+                weight: 3
+            },
+            peach: {
+                name: 'ピーチ',
+                emoji: '👑',
+                color: '#ffb6c1',
+                maxSpeed: 5,
+                acceleration: 0.3,
+                itemLuck: 1.0,
+                weight: 2
+            },
+            bowser: {
+                name: 'クッパ',
+                emoji: '🔥',
+                color: '#8b4513',
+                maxSpeed: 8,
+                acceleration: 0.6,
+                itemLuck: 0.4,
+                weight: 5
+            },
+            yoshi: {
+                name: 'ヨッシー',
+                emoji: '🦕',
+                color: '#32cd32',
+                maxSpeed: 8,
+                acceleration: 0.7,
+                itemLuck: 0.6,
+                weight: 2
+            },
+            toad: {
+                name: 'キノピオ',
+                emoji: '🍄',
+                color: '#ff69b4',
+                maxSpeed: 6,
+                acceleration: 0.5,
+                itemLuck: 0.8,
+                weight: 1
+            }
+        };
+
+        // アイテムデータ
+        const items = {
+            mushroom: { name: 'キノコ', emoji: '🍄', effect: 'speed_boost' },
+            shell: { name: 'コウラ', emoji: '🐢', effect: 'projectile' },
+            banana: { name: 'バナナ', emoji: '🍌', effect: 'trap' },
+            star: { name: 'スター', emoji: '⭐', effect: 'invincible' },
+            lightning: { name: 'カミナリ', emoji: '⚡', effect: 'shrink_others' },
+            bomb: { name: 'ボム', emoji: '💣', effect: 'explosion' }
+        };
+
+        // ゲーム状態
+        let gameState = {
+            selectedCharacter: null,
+            player: null,
+            cpuRacers: [],
+            itemBoxes: [],
+            projectiles: [],
+            traps: [],
+            currentItem: null,
+            score: 0,
+            lap: 1,
+            position: 1,
+            gameRunning: false,
+            keys: {},
+            trackOffset: 0,
+            raceDistance: 0,
+            totalRacers: 8,
+            driftBonus: 0,
+            speedBoostTimer: 0,
+            invincibleTimer: 0
+        };
+
+        // プレイヤークラス
+        class Player {
+            constructor(characterType) {
+                this.character = characters[characterType];
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 120;
+                this.speed = 0;
+                this.maxSpeed = this.character.maxSpeed;
+                this.acceleration = this.character.acceleration;
+                this.width = 45;
+                this.height = 65;
+                this.angle = 0;
+                this.drifting = false;
+                this.invulnerable = false;
+                this.stunned = false;
+                this.raceProgress = 0;
+            }
+
+            update() {
+                // 移動処理
+                let targetSpeed = 0;
+                if (gameState.keys['ArrowUp'] && !this.stunned) {
+                    targetSpeed = this.maxSpeed + (gameState.speedBoostTimer > 0 ? 3 : 0);
+                } else if (gameState.keys['ArrowDown']) {
+                    targetSpeed = -this.maxSpeed / 2;
+                }
+
+                // スピード調整
+                if (this.speed < targetSpeed) {
+                    this.speed = Math.min(this.speed + this.acceleration, targetSpeed);
+                } else if (this.speed > targetSpeed) {
+                    this.speed = Math.max(this.speed - this.acceleration * 1.5, targetSpeed);
+                }
+
+                // 左右移動
+                if (gameState.keys['ArrowLeft'] && !this.stunned) {
+                    this.x = Math.max(this.x - 6, 100);
+                    this.angle = -0.2;
+                }
+                if (gameState.keys['ArrowRight'] && !this.stunned) {
+                    this.x = Math.min(this.x + 6, canvas.width - 100);
+                    this.angle = 0.2;
+                }
+
+                // ドリフト処理
+                if (gameState.keys['ShiftLeft'] && (gameState.keys['ArrowLeft'] || gameState.keys['ArrowRight'])) {
+                    this.drifting = true;
+                    gameState.driftBonus = Math.min(gameState.driftBonus + 1, 100);
+                } else {
+                    if (this.drifting && gameState.driftBonus > 30) {
+                        // ドリフトボーナス
+                        gameState.speedBoostTimer = 120; // 2秒間スピードアップ
+                    }
+                    this.drifting = false;
+                    gameState.driftBonus = 0;
+                }
+
+                // 角度リセット
+                if (!gameState.keys['ArrowLeft'] && !gameState.keys['ArrowRight']) {
+                    this.angle *= 0.8;
+                }
+
+                // レース進行度更新
+                this.raceProgress += this.speed;
+                gameState.raceDistance = this.raceProgress;
+
+                // スコア増加
+                gameState.score += Math.floor(this.speed * 10);
+
+                // タイマー減少
+                if (gameState.speedBoostTimer > 0) gameState.speedBoostTimer--;
+                if (gameState.invincibleTimer > 0) gameState.invincibleTimer--;
+                if (this.stunned) this.stunned--;
+
+                // ラップ判定
+                if (this.raceProgress > 0 && this.raceProgress % 8000 < this.speed) {
+                    gameState.lap = Math.min(gameState.lap + 1, 3);
+                    if (gameState.lap > 3) {
+                        endRace();
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // 無敵状態のエフェクト
+                if (gameState.invincibleTimer > 0) {
+                    ctx.shadowColor = '#ffd700';
+                    ctx.shadowBlur = 20;
+                }
+
+                // スピードブーストエフェクト
+                if (gameState.speedBoostTimer > 0) {
+                    ctx.shadowColor = '#ff4500';
+                    ctx.shadowBlur = 15;
+                }
+
+                // 車体
+                ctx.fillStyle = this.character.color;
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+
+                // キャラクター絵文字
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.character.emoji, 0, 5);
+
+                // ドリフト煙エフェクト
+                if (this.drifting) {
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                    for (let i = 0; i < 3; i++) {
+                        ctx.beginPath();
+                        ctx.arc(-20 + Math.random() * 40, 35 + i * 10, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                ctx.restore();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // CPUレーサークラス
+        class CPURacer {
+            constructor(characterType, startX) {
+                this.character = characters[characterType];
+                this.x = startX;
+                this.y = canvas.height - 200 - Math.random() * 100;
+                this.speed = this.character.maxSpeed * (0.7 + Math.random() * 0.4);
+                this.maxSpeed = this.character.maxSpeed;
+                this.width = 40;
+                this.height = 60;
+                this.raceProgress = Math.random() * 100;
+                this.aiTimer = 0;
+                this.targetX = startX;
+                this.stunned = 0;
+            }
+
+            update() {
+                if (this.stunned > 0) {
+                    this.stunned--;
+                    this.speed *= 0.5;
+                    return;
+                }
+
+                // 簡単なAI
+                this.aiTimer++;
+                if (this.aiTimer % 60 === 0) {
+                    this.targetX = 150 + Math.random() * (canvas.width - 300);
+                }
+
+                // 目標位置に向かって移動
+                if (this.x < this.targetX) {
+                    this.x = Math.min(this.x + 3, this.targetX);
+                } else if (this.x > this.targetX) {
+                    this.x = Math.max(this.x - 3, this.targetX);
+                }
+
+                // レース進行
+                this.raceProgress += this.speed;
+
+                // スピード調整
+                this.speed = this.maxSpeed * (0.8 + Math.random() * 0.3);
+            }
+
+            draw() {
+                ctx.fillStyle = this.character.color;
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // キャラクター絵文字
+                ctx.font = '25px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'black';
+                ctx.fillText(this.character.emoji, this.x, this.y + 5);
+            }
+        }
+
+        // アイテムボックスクラス
+        class ItemBox {
+            constructor() {
+                this.x = 200 + Math.random() * (canvas.width - 400);
+                this.y = -50;
+                this.width = 40;
+                this.height = 40;
+                this.rotation = 0;
+                this.collected = false;
+            }
+
+            update() {
+                this.y += 4 + gameState.trackOffset;
+                this.rotation += 0.1;
+            }
+
+            draw() {
+                if (this.collected) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // アイテムボックス
+                ctx.fillStyle = '#ffd700';
+                ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+                ctx.strokeStyle = '#ff8c00';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(-this.width / 2, -this.height / 2, this.width, this.height);
+
+                // ？マーク
+                ctx.fillStyle = '#ff0000';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('?', 0, 8);
+
+                ctx.restore();
+            }
+        }
+
+        // 発射物クラス
+        class Projectile {
+            constructor(x, y, targetY) {
+                this.x = x;
+                this.y = y;
+                this.targetY = targetY;
+                this.speed = 8;
+                this.width = 30;
+                this.height = 30;
+                this.type = 'shell';
+            }
+
+            update() {
+                this.y += this.speed;
+            }
+
+            draw() {
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 15, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = 'black';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🐢', this.x, this.y + 5);
+            }
+        }
+
+        // トラップクラス
+        class Trap {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 35;
+                this.height = 35;
+                this.lifetime = 300; // 5秒
+            }
+
+            update() {
+                this.y += gameState.trackOffset;
+                this.lifetime--;
+            }
+
+            draw() {
+                if (this.lifetime <= 0) return;
+
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('🍌', this.x, this.y);
+            }
+        }
+
+        // 衝突判定
+        function checkCollision(obj1, obj2) {
+            return obj1.x - obj1.width / 2 < obj2.x + obj2.width / 2 &&
+                obj1.x + obj1.width / 2 > obj2.x - obj2.width / 2 &&
+                obj1.y - obj1.height / 2 < obj2.y + obj2.height / 2 &&
+                obj1.y + obj1.height / 2 > obj2.y - obj2.height / 2;
+        }
+
+        // アイテム使用
+        function useItem() {
+            if (!gameState.currentItem) return;
+
+            const item = gameState.currentItem;
+
+            switch (item.effect) {
+                case 'speed_boost':
+                    gameState.speedBoostTimer = 180; // 3秒間
+                    break;
+
+                case 'projectile':
+                    gameState.projectiles.push(new Projectile(
+                        gameState.player.x,
+                        gameState.player.y - 50,
+                        gameState.player.y - 200
+                    ));
+                    break;
+
+                case 'trap':
+                    gameState.traps.push(new Trap(
+                        gameState.player.x,
+                        gameState.player.y + 50
+                    ));
+                    break;
+
+                case 'invincible':
+                    gameState.invincibleTimer = 300; // 5秒間
+                    break;
+
+                case 'shrink_others':
+                    gameState.cpuRacers.forEach(cpu => {
+                        cpu.stunned = 180; // 3秒間
+                    });
+                    break;
+
+                case 'explosion':
+                    // 周囲の敵を吹き飛ばす
+                    gameState.cpuRacers.forEach(cpu => {
+                        const distance = Math.abs(cpu.x - gameState.player.x) + Math.abs(cpu.y - gameState.player.y);
+                        if (distance < 150) {
+                            cpu.stunned = 120;
+                        }
+                    });
+                    break;
+            }
+
+            gameState.currentItem = null;
+            updateItemDisplay();
+        }
+
+        // ランダムアイテム取得
+        function getRandomItem() {
+            const itemKeys = Object.keys(items);
+            const luck = gameState.player.character.itemLuck;
+
+            // 運によってレアアイテムの確率を調整
+            let availableItems = itemKeys;
+            if (Math.random() > luck) {
+                availableItems = itemKeys.filter(key =>
+                    key !== 'star' && key !== 'lightning' && key !== 'bomb'
+                );
+            }
+
+            const randomKey = availableItems[Math.floor(Math.random() * availableItems.length)];
+            return items[randomKey];
+        }
+
+        // 順位計算
+        function calculatePosition() {
+            const allRacers = [gameState.player, ...gameState.cpuRacers];
+            allRacers.sort((a, b) => b.raceProgress - a.raceProgress);
+
+            const playerIndex = allRacers.indexOf(gameState.player);
+            gameState.position = playerIndex + 1;
+        }
+
+        // 道路とコース描画
+        function drawTrack() {
+            // 背景（草原）
+            ctx.fillStyle = '#90EE90';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 道路
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(100, 0, canvas.width - 200, canvas.height);
+
+            // 道路の境界線
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(100, 0, 8, canvas.height);
+            ctx.fillRect(canvas.width - 108, 0, 8, canvas.height);
+
+            // 中央線
+            ctx.fillStyle = '#FFFF00';
+            for (let i = 0; i < canvas.height; i += 60) {
+                const offset = (gameState.trackOffset * 3) % 60;
+                ctx.fillRect(canvas.width / 2 - 3, i - offset, 6, 30);
+            }
+
+            // チェッカーフラッグパターン（ゴール付近）
+            if (gameState.lap === 3 && gameState.raceDistance % 8000 > 7500) {
+                for (let x = 100; x < canvas.width - 100; x += 40) {
+                    for (let y = 0; y < canvas.height; y += 40) {
+                        ctx.fillStyle = ((x + y) / 40) % 2 === 0 ? '#000' : '#fff';
+                        ctx.fillRect(x, y, 40, 40);
+                    }
+                }
+            }
+        }
+
+        // UI更新
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lap').textContent = gameState.lap;
+            document.getElementById('position').textContent = gameState.position;
+            document.getElementById('speed').textContent = Math.floor(gameState.player.speed * 20);
+
+            // 順位表示
+            const positions = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th'];
+            document.getElementById('positionLarge').textContent = positions[gameState.position - 1] || '8th';
+
+            // 順位に応じて色を変更
+            const positionElement = document.getElementById('positionLarge');
+            if (gameState.position === 1) {
+                positionElement.style.color = '#ffd700';
+            } else if (gameState.position <= 3) {
+                positionElement.style.color = '#c0c0c0';
+            } else {
+                positionElement.style.color = '#cd7f32';
+            }
+        }
+
+        // アイテム表示更新
+        function updateItemDisplay() {
+            const itemBox = document.getElementById('currentItem');
+            const itemName = document.getElementById('itemName');
+
+            if (gameState.currentItem) {
+                itemBox.textContent = gameState.currentItem.emoji;
+                itemName.textContent = gameState.currentItem.name;
+            } else {
+                itemBox.textContent = '❓';
+                itemName.textContent = 'なし';
+            }
+        }
+
+        // ミニマップ描画
+        function drawMinimap() {
+            minimapCtx.fillStyle = '#90EE90';
+            minimapCtx.fillRect(0, 0, 150, 100);
+
+            // トラック
+            minimapCtx.fillStyle = '#696969';
+            minimapCtx.fillRect(20, 0, 110, 100);
+
+            // プレイヤー
+            minimapCtx.fillStyle = '#ff0000';
+            minimapCtx.fillRect(70, 80, 10, 10);
+
+            // CPU
+            gameState.cpuRacers.forEach((cpu, index) => {
+                minimapCtx.fillStyle = cpu.character.color;
+                const y = 80 - (cpu.raceProgress - gameState.player.raceProgress) * 0.01;
+                minimapCtx.fillRect(25 + (index % 10) * 10, Math.max(0, Math.min(90, y)), 8, 8);
+            });
+        }
+
+        // ゲームループ
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+
+            // 画面クリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // トラック描画
+            drawTrack();
+
+            // プレイヤー更新・描画
+            gameState.player.update();
+            gameState.player.draw();
+
+            // CPU更新・描画
+            gameState.cpuRacers.forEach(cpu => {
+                cpu.update();
+                cpu.draw();
+            });
+
+            // アイテムボックス生成
+            if (Math.random() < 0.02) {
+                gameState.itemBoxes.push(new ItemBox());
+            }
+
+            // アイテムボックス更新・描画・衝突判定
+            gameState.itemBoxes = gameState.itemBoxes.filter(box => {
+                box.update();
+                box.draw();
+
+                if (!box.collected && checkCollision(gameState.player, box)) {
+                    box.collected = true;
+                    if (!gameState.currentItem) {
+                        gameState.currentItem = getRandomItem();
+                        updateItemDisplay();
+                    }
+                    gameState.score += 100;
+                    return false;
+                }
+
+                return box.y < canvas.height + 100;
+            });
+
+            // 発射物更新・描画
+            gameState.projectiles = gameState.projectiles.filter(projectile => {
+                projectile.update();
+                projectile.draw();
+
+                // CPU との衝突判定
+                gameState.cpuRacers.forEach(cpu => {
+                    if (checkCollision(projectile, cpu)) {
+                        cpu.stunned = 120;
+                        gameState.score += 200;
+                    }
+                });
+
+                return projectile.y < canvas.height + 100;
+            });
+
+            // トラップ更新・描画
+            gameState.traps = gameState.traps.filter(trap => {
+                trap.update();
+                trap.draw();
+
+                // CPU との衝突判定
+                gameState.cpuRacers.forEach(cpu => {
+                    if (checkCollision(trap, cpu)) {
+                        cpu.stunned = 90;
+                        trap.lifetime = 0;
+                    }
+                });
+
+                return trap.lifetime > 0 && trap.y < canvas.height + 100;
+            });
+
+            // 順位計算
+            calculatePosition();
+
+            // UI更新
+            updateUI();
+
+            // ミニマップ更新
+            drawMinimap();
+
+            // トラックオフセット更新
+            gameState.trackOffset = gameState.player.speed;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // キャラクター選択
+        document.querySelectorAll('.character-option').forEach(option => {
+            option.addEventListener('click', function () {
+                document.querySelectorAll('.character-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                gameState.selectedCharacter = this.dataset.character;
+            });
+        });
+
+        // レース開始
+        function startRace() {
+            if (!gameState.selectedCharacter) {
+                alert('キャラクターを選択してください！');
+                return;
+            }
+
+            document.getElementById('characterSelection').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+
+            // ゲーム初期化
+            gameState.player = new Player(gameState.selectedCharacter);
+            gameState.cpuRacers = [];
+
+            // CPU レーサー生成
+            const availableCharacters = Object.keys(characters).filter(char => char !== gameState.selectedCharacter);
+            for (let i = 0; i < 7; i++) {
+                const charType = availableCharacters[i % availableCharacters.length];
+                gameState.cpuRacers.push(new CPURacer(charType, 200 + i * 80));
+            }
+
+            gameState.itemBoxes = [];
+            gameState.projectiles = [];
+            gameState.traps = [];
+            gameState.currentItem = null;
+            gameState.score = 0;
+            gameState.lap = 1;
+            gameState.position = Math.floor(Math.random() * 4) + 3; // 3-6位からスタート
+            gameState.gameRunning = true;
+            gameState.trackOffset = 0;
+            gameState.raceDistance = 0;
+            gameState.speedBoostTimer = 0;
+            gameState.invincibleTimer = 0;
+
+            updateItemDisplay();
+            gameLoop();
+        }
+
+        // レース終了
+        function endRace() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLap').textContent = gameState.lap;
+
+            // 最終順位表示
+            const positions = ['🥇 1位！', '🥈 2位！', '🥉 3位！', '4位', '5位', '6位', '7位', '8位'];
+            document.getElementById('finalPosition').textContent = positions[gameState.position - 1] || '8位';
+
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // レース再開
+        function restartRace() {
+            document.getElementById('gameOver').style.display = 'none';
+            startRace();
+        }
+
+        // キャラクター選択に戻る
+        function backToSelection() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('characterSelection').style.display = 'block';
+
+            // 選択リセット
+            document.querySelectorAll('.character-option').forEach(opt => opt.classList.remove('selected'));
+            gameState.selectedCharacter = null;
+        }
+
+        // キーボードイベント
+        document.addEventListener('keydown', function (e) {
+            gameState.keys[e.code] = true;
+
+            if (e.code === 'Space' && gameState.gameRunning) {
+                e.preventDefault();
+                useItem();
+            }
+        });
+
+        document.addEventListener('keyup', function (e) {
+            gameState.keys[e.code] = false;
+        });
+
+        // 初期化
+        updateItemDisplay();
+    </script>
+</body>
+
+</html>
