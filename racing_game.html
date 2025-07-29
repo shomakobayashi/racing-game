@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>レーシングゲーム</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .game-container {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        canvas {
+            border: 3px solid #fff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .car-selection {
+            margin-bottom: 20px;
+        }
+
+        .car-option {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: white;
+        }
+
+        .car-option:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+        }
+
+        .car-option.selected {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: #ffff00;
+        }
+
+        .controls {
+            color: white;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+
+        .ui-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-weight: bold;
+            z-index: 100;
+        }
+
+        .special-gauge {
+            width: 200px;
+            height: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid white;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .gauge-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ffd93d);
+            transition: width 0.3s ease;
+        }
+
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 10px;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 200;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="game-container">
+        <h1>🏎️ レーシングゲーム 🏁</h1>
+
+        <div id="carSelection" class="car-selection">
+            <h3 style="color: white;">車種を選択してください</h3>
+            <div class="car-option" data-car="speed">
+                <h4>🏎️ スピードカー</h4>
+                <p>最高速度: ★★★★★<br>加速: ★★★☆☆<br>必殺技: 🚀 超加速ブースト</p>
+            </div>
+            <div class="car-option" data-car="power">
+                <h4>🚗 パワーカー</h4>
+                <p>最高速度: ★★★☆☆<br>加速: ★★★★★<br>必殺技: 💥 破壊レーザー</p>
+            </div>
+            <div class="car-option" data-car="tech">
+                <h4>🚙 テックカー</h4>
+                <p>最高速度: ★★★★☆<br>加速: ★★★★☆<br>必殺技: ⚡ 敵スロー攻撃</p>
+            </div>
+            <div class="car-option" data-car="defense">
+                <h4>🛡️ ディフェンスカー</h4>
+                <p>最高速度: ★★★☆☆<br>加速: ★★☆☆☆<br>必殺技: 🛡️ 無敵バリア</p>
+            </div>
+            <br>
+            <button onclick="startGame()">ゲーム開始</button>
+        </div>
+
+        <div id="gameArea" style="display: none; position: relative;">
+            <div class="ui-overlay">
+                <div>スコア: <span id="score">0</span></div>
+                <div>ラップ: <span id="lap">1</span>/3</div>
+                <div>必殺技ゲージ:</div>
+                <div class="special-gauge">
+                    <div id="specialGauge" class="gauge-fill" style="width: 0%;"></div>
+                </div>
+                <div id="specialStatus"></div>
+            </div>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <div class="controls">
+                <p>操作: ↑↓←→ 移動 | スペースキー: 必殺技</p>
+            </div>
+        </div>
+
+        <div id="gameOver" class="game-over" style="display: none;">
+            <h2>ゲーム終了！</h2>
+            <p>最終スコア: <span id="finalScore">0</span></p>
+            <p>完走ラップ: <span id="finalLap">0</span>/3</p>
+            <button onclick="restartGame()">もう一度プレイ</button>
+        </div>
+    </div>
+
+    <script>
+        // ゲーム設定
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // 車種データ
+        const carTypes = {
+            speed: {
+                name: 'スピードカー',
+                color: '#ff0000',
+                maxSpeed: 8,
+                acceleration: 0.3,
+                special: 'boost',
+                specialName: '🚀 超加速ブースト',
+                specialDuration: 180 // 3秒
+            },
+            power: {
+                name: 'パワーカー',
+                color: '#00ff00',
+                maxSpeed: 6,
+                acceleration: 0.5,
+                special: 'destroy',
+                specialName: '💥 破壊レーザー',
+                specialDuration: 300 // 5秒
+            },
+            tech: {
+                name: 'テックカー',
+                color: '#0000ff',
+                maxSpeed: 7,
+                acceleration: 0.4,
+                special: 'jam',
+                specialName: '⚡ 敵スロー攻撃',
+                specialDuration: 240 // 4秒
+            },
+            defense: {
+                name: 'ディフェンスカー',
+                color: '#ffff00',
+                maxSpeed: 5,
+                acceleration: 0.2,
+                special: 'shield',
+                specialName: '🛡️ 無敵バリア',
+                specialDuration: 180 // 3秒
+            }
+        };
+
+        // ゲーム状態
+        let gameState = {
+            selectedCar: null,
+            player: null,
+            enemies: [],
+            obstacles: [],
+            score: 0,
+            lap: 1,
+            specialGauge: 0,
+            specialActive: false,
+            specialDuration: 0,
+            specialCooldown: 0,
+            gameRunning: false,
+            keys: {},
+            trackOffset: 0,
+            destroyLasers: [] // パワーカー用のレーザー
+        };
+
+        // プレイヤークラス
+        class Player {
+            constructor(carType) {
+                this.carType = carTypes[carType];
+                this.x = canvas.width / 2;
+                this.y = canvas.height - 100;
+                this.speed = 0;
+                this.maxSpeed = this.carType.maxSpeed;
+                this.acceleration = this.carType.acceleration;
+                this.width = 40;
+                this.height = 60;
+                this.invulnerable = false;
+            }
+
+            update() {
+                // 移動処理
+                if (gameState.keys['ArrowUp']) {
+                    this.speed = Math.min(this.speed + this.acceleration, this.maxSpeed);
+                } else if (gameState.keys['ArrowDown']) {
+                    this.speed = Math.max(this.speed - this.acceleration, -this.maxSpeed / 2);
+                } else {
+                    this.speed *= 0.95; // 減速
+                }
+
+                if (gameState.keys['ArrowLeft']) {
+                    this.x = Math.max(this.x - 5, 200);
+                }
+                if (gameState.keys['ArrowRight']) {
+                    this.x = Math.min(this.x + 5, canvas.width - 200);
+                }
+
+                // 必殺技ゲージ増加（移動中に増加）
+                if (gameState.specialGauge < 100 && gameState.specialCooldown <= 0 && !gameState.specialActive) {
+                    gameState.specialGauge += Math.abs(this.speed) * 0.3;
+                    gameState.specialGauge = Math.min(gameState.specialGauge, 100);
+                }
+
+                // 必殺技クールダウン
+                if (gameState.specialCooldown > 0) {
+                    gameState.specialCooldown--;
+                }
+
+                // 必殺技持続時間
+                if (gameState.specialDuration > 0) {
+                    gameState.specialDuration--;
+                    this.handleSpecialEffect();
+
+                    if (gameState.specialDuration <= 0) {
+                        this.deactivateSpecial();
+                    }
+                }
+
+                // スコア増加
+                gameState.score += Math.floor(this.speed);
+
+                // ラップ判定（簡易版）
+                if (gameState.score > 0 && gameState.score % 5000 === 0) {
+                    gameState.lap = Math.min(gameState.lap + 1, 3);
+                    if (gameState.lap > 3) {
+                        endGame();
+                    }
+                }
+            }
+
+            handleSpecialEffect() {
+                switch (this.carType.special) {
+                    case 'boost':
+                        // スピードカー: 超加速ブースト
+                        this.maxSpeed = this.carType.maxSpeed * 2.5;
+                        break;
+                    case 'destroy':
+                        // パワーカー: 破壊レーザー発射
+                        if (gameState.specialDuration % 20 === 0) { // 1/3秒ごとにレーザー発射
+                            gameState.destroyLasers.push({
+                                x: this.x,
+                                y: this.y - 50,
+                                width: 10,
+                                height: 100,
+                                speed: 15
+                            });
+                        }
+                        break;
+                    case 'jam':
+                        // テックカー: 敵の動きを遅くする
+                        gameState.enemies.forEach(enemy => {
+                            enemy.speed = Math.max(enemy.speed * 0.3, 0.5);
+                        });
+                        break;
+                    case 'shield':
+                        // ディフェンスカー: 無敵バリア
+                        this.invulnerable = true;
+                        break;
+                }
+            }
+
+            deactivateSpecial() {
+                gameState.specialActive = false;
+                this.maxSpeed = this.carType.maxSpeed;
+                this.invulnerable = false;
+                gameState.specialCooldown = 300; // 5秒のクールダウン
+            }
+
+            activateSpecial() {
+                if (gameState.specialGauge >= 100 && gameState.specialCooldown <= 0 && !gameState.specialActive) {
+                    gameState.specialGauge = 0;
+                    gameState.specialActive = true;
+                    gameState.specialDuration = this.carType.specialDuration;
+
+                    // 発動時の効果音代わりにコンソールログ
+                    console.log(`${this.carType.specialName} 発動！`);
+
+                    return true;
+                }
+                return false;
+            }
+
+            draw() {
+                // 必殺技の視覚効果
+                if (gameState.specialActive) {
+                    switch (this.carType.special) {
+                        case 'boost':
+                            // スピードブースト: 炎のエフェクト
+                            ctx.fillStyle = '#ff4500';
+                            for (let i = 0; i < 5; i++) {
+                                ctx.beginPath();
+                                ctx.arc(this.x + (Math.random() - 0.5) * 30,
+                                    this.y + 40 + i * 10,
+                                    5 + Math.random() * 5, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                            break;
+                        case 'shield':
+                            // バリア: 青い円形シールド
+                            ctx.strokeStyle = '#00ffff';
+                            ctx.lineWidth = 5;
+                            ctx.beginPath();
+                            ctx.arc(this.x, this.y, 50, 0, Math.PI * 2);
+                            ctx.stroke();
+                            break;
+                        case 'jam':
+                            // 妨害: 電気エフェクト
+                            ctx.strokeStyle = '#ffff00';
+                            ctx.lineWidth = 3;
+                            for (let i = 0; i < 3; i++) {
+                                ctx.beginPath();
+                                ctx.moveTo(this.x - 30, this.y - 30 + i * 20);
+                                ctx.lineTo(this.x + 30, this.y - 30 + i * 20);
+                                ctx.stroke();
+                            }
+                            break;
+                    }
+                }
+
+                ctx.fillStyle = this.carType.color;
+                if (this.invulnerable) {
+                    ctx.shadowColor = '#ffffff';
+                    ctx.shadowBlur = 20;
+                }
+
+                // 車体
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // 窓
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(this.x - this.width / 3, this.y - this.height / 3, this.width / 1.5, this.height / 3);
+
+                // 必殺技アイコン表示
+                if (gameState.specialActive) {
+                    ctx.font = '20px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = '#ffffff';
+                    let icon = '';
+                    switch (this.carType.special) {
+                        case 'boost': icon = '🚀'; break;
+                        case 'destroy': icon = '💥'; break;
+                        case 'jam': icon = '⚡'; break;
+                        case 'shield': icon = '🛡️'; break;
+                    }
+                    ctx.fillText(icon, this.x, this.y - 40);
+                }
+
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // 敵クラス
+        class Enemy {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 400) + 200;
+                this.y = -60;
+                this.speed = Math.random() * 3 + 2;
+                this.width = 35;
+                this.height = 55;
+                this.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+            }
+
+            update() {
+                this.y += this.speed + gameState.trackOffset;
+
+                // 簡単なAI - プレイヤーに向かって移動
+                if (Math.random() < 0.02) {
+                    if (this.x < gameState.player.x) {
+                        this.x += 2;
+                    } else if (this.x > gameState.player.x) {
+                        this.x -= 2;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // 窓
+                ctx.fillStyle = '#333';
+                ctx.fillRect(this.x - this.width / 3, this.y - this.height / 4, this.width / 1.5, this.height / 4);
+            }
+        }
+
+        // 破壊レーザークラス（パワーカー用）
+        class DestroyLaser {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 10;
+                this.height = 100;
+                this.speed = 15;
+            }
+
+            update() {
+                this.y -= this.speed;
+            }
+
+            draw() {
+                ctx.fillStyle = '#ff0000';
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // レーザーの光る効果
+                ctx.shadowColor = '#ff0000';
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = '#ffff00';
+                ctx.fillRect(this.x - this.width / 4, this.y - this.height / 2, this.width / 2, this.height);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // 障害物クラス
+        class Obstacle {
+            constructor() {
+                this.x = Math.random() * (canvas.width - 400) + 200;
+                this.y = -30;
+                this.width = 60;
+                this.height = 30;
+                this.speed = 3;
+            }
+
+            update() {
+                this.y += this.speed + gameState.trackOffset;
+            }
+
+            draw() {
+                ctx.fillStyle = '#8B4513';
+                ctx.fillRect(this.x - this.width / 2, this.y - this.height / 2, this.width, this.height);
+
+                // 警告マーク
+                ctx.fillStyle = '#FF0000';
+                ctx.font = '20px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠', this.x, this.y + 5);
+            }
+        }
+
+        // 衝突判定
+        function checkCollision(obj1, obj2) {
+            return obj1.x - obj1.width / 2 < obj2.x + obj2.width / 2 &&
+                obj1.x + obj1.width / 2 > obj2.x - obj2.width / 2 &&
+                obj1.y - obj1.height / 2 < obj2.y + obj2.height / 2 &&
+                obj1.y + obj1.height / 2 > obj2.y - obj2.height / 2;
+        }
+
+        // 道路描画
+        function drawRoad() {
+            // 背景
+            ctx.fillStyle = '#228B22';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 道路
+            ctx.fillStyle = '#696969';
+            ctx.fillRect(150, 0, canvas.width - 300, canvas.height);
+
+            // 道路の境界線
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(150, 0, 10, canvas.height);
+            ctx.fillRect(canvas.width - 160, 0, 10, canvas.height);
+
+            // 中央線
+            ctx.fillStyle = '#FFFF00';
+            for (let i = 0; i < canvas.height; i += 40) {
+                ctx.fillRect(canvas.width / 2 - 2, i + (gameState.trackOffset * 2) % 40, 4, 20);
+            }
+        }
+
+        // ゲームループ
+        function gameLoop() {
+            if (!gameState.gameRunning) return;
+
+            // 画面クリア
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 道路描画
+            drawRoad();
+
+            // プレイヤー更新・描画
+            gameState.player.update();
+            gameState.player.draw();
+
+            // 敵生成
+            if (Math.random() < 0.02) {
+                gameState.enemies.push(new Enemy());
+            }
+
+            // 障害物生成
+            if (Math.random() < 0.01) {
+                gameState.obstacles.push(new Obstacle());
+            }
+
+            // 敵更新・描画・衝突判定
+            gameState.enemies = gameState.enemies.filter(enemy => {
+                enemy.update();
+                enemy.draw();
+
+                if (checkCollision(gameState.player, enemy) && !gameState.player.invulnerable) {
+                    gameState.score = Math.max(0, gameState.score - 500);
+                    return false; // 敵を削除
+                }
+
+                return enemy.y < canvas.height + 100;
+            });
+
+            // 破壊レーザー更新・描画・衝突判定（パワーカー用）
+            gameState.destroyLasers = gameState.destroyLasers.filter(laser => {
+                laser.update();
+                laser.draw();
+
+                // 敵との衝突判定
+                let hit = false;
+                gameState.enemies = gameState.enemies.filter(enemy => {
+                    if (checkCollision(laser, enemy)) {
+                        gameState.score += 300; // レーザーで敵を倒すとボーナス
+                        hit = true;
+                        return false;
+                    }
+                    return true;
+                });
+
+                // 障害物との衝突判定
+                gameState.obstacles = gameState.obstacles.filter(obstacle => {
+                    if (checkCollision(laser, obstacle)) {
+                        gameState.score += 200; // レーザーで障害物を破壊
+                        hit = true;
+                        return false;
+                    }
+                    return true;
+                });
+
+                return laser.y > -100 && !hit;
+            });
+
+            // 障害物更新・描画・衝突判定
+            gameState.obstacles = gameState.obstacles.filter(obstacle => {
+                obstacle.update();
+                obstacle.draw();
+
+                if (checkCollision(gameState.player, obstacle)) {
+                    if (gameState.player.carType.special === 'destroy' && gameState.specialActive) {
+                        // パワーカーの必殺技で障害物破壊
+                        gameState.score += 100;
+                        return false;
+                    } else if (!gameState.player.invulnerable) {
+                        gameState.score = Math.max(0, gameState.score - 200);
+                        return false;
+                    }
+                }
+
+                return obstacle.y < canvas.height + 100;
+            });
+
+            // UI更新
+            updateUI();
+
+            // トラックオフセット更新
+            gameState.trackOffset = gameState.player.speed;
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // UI更新
+        function updateUI() {
+            document.getElementById('score').textContent = gameState.score;
+            document.getElementById('lap').textContent = gameState.lap;
+            document.getElementById('specialGauge').style.width = gameState.specialGauge + '%';
+
+            let statusText = '';
+            if (gameState.specialActive) {
+                const remainingTime = Math.ceil(gameState.specialDuration / 60);
+                statusText = `${gameState.player.carType.specialName} 発動中！ 残り${remainingTime}秒`;
+            } else if (gameState.specialCooldown > 0) {
+                statusText = `クールダウン: ${Math.ceil(gameState.specialCooldown / 60)}秒`;
+            } else if (gameState.specialGauge >= 100) {
+                statusText = '🔥 スペースキーで必殺技発動可能！ 🔥';
+            } else {
+                statusText = `必殺技チャージ中... ${Math.floor(gameState.specialGauge)}%`;
+            }
+            document.getElementById('specialStatus').textContent = statusText;
+        }
+
+        // 車種選択
+        document.querySelectorAll('.car-option').forEach(option => {
+            option.addEventListener('click', function () {
+                document.querySelectorAll('.car-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                gameState.selectedCar = this.dataset.car;
+            });
+        });
+
+        // ゲーム開始
+        function startGame() {
+            if (!gameState.selectedCar) {
+                alert('車種を選択してください！');
+                return;
+            }
+
+            document.getElementById('carSelection').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'block';
+
+            // ゲーム初期化
+            gameState.player = new Player(gameState.selectedCar);
+            gameState.enemies = [];
+            gameState.obstacles = [];
+            gameState.destroyLasers = [];
+            gameState.score = 0;
+            gameState.lap = 1;
+            gameState.specialGauge = 0;
+            gameState.specialActive = false;
+            gameState.specialDuration = 0;
+            gameState.specialCooldown = 0;
+            gameState.gameRunning = true;
+            gameState.trackOffset = 0;
+
+            gameLoop();
+        }
+
+        // ゲーム終了
+        function endGame() {
+            gameState.gameRunning = false;
+            document.getElementById('finalScore').textContent = gameState.score;
+            document.getElementById('finalLap').textContent = gameState.lap;
+            document.getElementById('gameOver').style.display = 'block';
+        }
+
+        // ゲーム再開
+        function restartGame() {
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('gameArea').style.display = 'none';
+            document.getElementById('carSelection').style.display = 'block';
+
+            // 選択リセット
+            document.querySelectorAll('.car-option').forEach(opt => opt.classList.remove('selected'));
+            gameState.selectedCar = null;
+        }
+
+        // キーボードイベント
+        document.addEventListener('keydown', function (e) {
+            gameState.keys[e.code] = true;
+
+            if (e.code === 'Space' && gameState.gameRunning) {
+                e.preventDefault();
+                gameState.player.activateSpecial();
+            }
+        });
+
+        document.addEventListener('keyup', function (e) {
+            gameState.keys[e.code] = false;
+        });
+
+        // ゲームオーバー条件チェック
+        setInterval(() => {
+            if (gameState.gameRunning && gameState.score < -1000) {
+                endGame();
+            }
+        }, 1000);
+    </script>
+</body>
+
+</html>
